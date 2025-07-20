@@ -12,11 +12,15 @@
   "dependencies": {
     "expo": "~53.0.17",
     "expo-status-bar": "~2.2.3",
+    "lucide-react": "^0.525.0",
     "react": "19.0.0",
-    "react-native": "0.79.5"
+    "react-native": "0.79.5",
+    "react-native-tts": "^4.1.1",
+    "expo-speech": "~13.1.7"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "@react-native-community/cli": "^19.1.0"
   },
   "private": true
 }
