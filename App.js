@@ -13,32 +13,17 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Picker } from '@react-native-picker/picker';
 
-import Tts from 'react-native-tts'; // Import the TTS library
-
-// In a real app, you would install a library like 'react-native-tts'
-// and 'react-native-vector-icons' for icons.
+// In a real app, you would install a library like 'react-native-vector-icons' for icons.
 
 const Icon = ({ name, color, size = 24 }) => <View style={{ width: size, height: size, borderRadius: size/2, backgroundColor: color+'33', justifyContent: 'center', alignItems: 'center' }}><Text style={{textAlign: 'center', fontWeight: 'bold', color: color}}>{name.charAt(0)}</Text></View>;
 
 // New SpeakButton component for TTS
-const SpeakButton = ({ textToSpeak, style }) => {
+const SpeakButton = ({ textToSpeak, style, speechLanguage }) => {
     const handlePress = () => {
-      speak('Hiii Tushar');
-      // if (!Spich) {
-      //       Alert.alert("Error", "Text-to-speech is not available on this device.");
-      //       return;
-      // }
-      // Spich.speak('Hiii Tushar');
-      // Tts.speak("Hi Tushar")
-      // console.log("TTS started", Tts.getInitStatus());
-        // Guard clause to check if Tts is available
-        // if (!Tts) {
-        //     Alert.alert("Error", "Text-to-speech is not available on this device.");
-        //     return;
-        // }
-        // Tts.stop(); // Stop any previous speech
-        // Tts.speak(textToSpeak);
+      speak(textToSpeak, { language: speechLanguage });
     };
     return (
         <TouchableOpacity onPress={handlePress} style={style}>
@@ -103,6 +88,35 @@ const LoginScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnabled 
   const [password, setPassword] = useState('');
   // Tts.speak('Hello, this is a test.');
 
+  // Log out user whenever LoginScreen is rendered
+  useEffect(() => {
+    setLoggedIn(false);
+  }, []);
+
+  // Biometric authentication handler
+  const handleBiometricAuth = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Biometric authentication not available', 'Your device does not support biometric authentication or it is not set up.');
+        return;
+      }
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Login with Face ID / Fingerprint',
+        fallbackLabel: 'Enter Passcode',
+        disableDeviceFallback: false,
+      });
+      if (result.success) {
+        setLoggedIn(true);
+      } else {
+        Alert.alert('Authentication failed', 'Could not authenticate with biometrics.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An error occurred during biometric authentication.');
+    }
+  };
+
   const handleLogin = () => {
     if (email == '' && password == '') {
       setLoggedIn(true);
@@ -128,9 +142,9 @@ const LoginScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnabled 
       </TouchableOpacity>
       
       {isBiometricsEnabled && (
-        <TouchableOpacity onPress={() => setLoggedIn(true)} style={styles.biometricButton}>
+        <TouchableOpacity onPress={handleBiometricAuth} style={styles.biometricButton}>
           <Icon name="FaceID" color="#A5B4FC" size={32} />
-          <Text style={styles.biometricButtonText}>Login with Face ID</Text>
+          <Text style={styles.biometricButtonText}>Login with Face ID / Fingerprint</Text>
         </TouchableOpacity>
       )}
 
@@ -150,7 +164,7 @@ const LoginScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnabled 
   );
 };
 
-const DashboardScreen = ({ setScreen, setSelectedAccount }) => {
+const DashboardScreen = ({ setScreen, setSelectedAccount, speechLanguage }) => {
   const totalBalance = useMemo(() => mockAccounts.reduce((sum, acc) => sum + acc.balance, 0), []);
   const formattedTotalBalance = totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
@@ -166,7 +180,7 @@ const DashboardScreen = ({ setScreen, setSelectedAccount }) => {
         <Card style={styles.balanceCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
-            <SpeakButton textToSpeak={`Total Balance: ${formattedTotalBalance} dollars`} />
+            <SpeakButton textToSpeak={`Total Balance: ${formattedTotalBalance} dollars`} speechLanguage={speechLanguage} />
           </View>
           <Text style={styles.balanceAmount}>${formattedTotalBalance}</Text>
         </Card>
@@ -184,7 +198,7 @@ const DashboardScreen = ({ setScreen, setSelectedAccount }) => {
                     <Text style={[styles.accountBalance, account.balance < 0 && styles.negativeBalance]}>${formattedBalance}</Text>
                     <Icon name="ChevronRight" color="#9CA3AF" />
                   </View>
-                   <SpeakButton textToSpeak={`${account.name}. Balance: ${formattedBalance} dollars.`} style={styles.listItemSpeakButton} />
+                   <SpeakButton textToSpeak={`${account.name}. Balance: ${formattedBalance} dollars.`} style={styles.listItemSpeakButton} speechLanguage={speechLanguage} />
                 </Card>
               </TouchableOpacity>
             )
@@ -206,7 +220,7 @@ const DashboardScreen = ({ setScreen, setSelectedAccount }) => {
   );
 };
 
-const AccountsScreen = ({ setScreen, setSelectedAccount }) => (
+const AccountsScreen = ({ setScreen, setSelectedAccount, speechLanguage }) => (
     <View style={styles.screen}>
         <ScreenHeader title="My Accounts" />
         <ScrollView style={{padding: 16}}>
@@ -228,7 +242,7 @@ const AccountsScreen = ({ setScreen, setSelectedAccount }) => (
     </View>
 );
 
-const TransactionsScreen = ({ account, setScreen }) => {
+const TransactionsScreen = ({ account, setScreen, speechLanguage }) => {
     const transactions = mockTransactions[account.id] || [];
     const formattedBalance = account.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return (
@@ -238,7 +252,7 @@ const TransactionsScreen = ({ account, setScreen }) => {
                 <Card>
                     <View style={styles.cardHeader}>
                         <Text style={styles.balanceLabel}>Current Balance</Text>
-                         <SpeakButton textToSpeak={`Current Balance: ${formattedBalance} dollars`} />
+                         <SpeakButton textToSpeak={`Current Balance: ${formattedBalance} dollars`} speechLanguage={speechLanguage} />
                     </View>
                     <Text style={[styles.balanceAmount, {color: '#1F2937', fontSize: 30}]}>${formattedBalance}</Text>
                 </Card>
@@ -256,7 +270,7 @@ const TransactionsScreen = ({ account, setScreen }) => {
                                 <Text style={[styles.txAmount, tx.type === 'credit' && styles.creditAmount]}>
                                     {tx.type === 'credit' ? '+' : '-'}${amount}
                                 </Text>
-                                <SpeakButton textToSpeak={`${tx.description}. ${sign}: ${amount} dollars.`} />
+                                <SpeakButton textToSpeak={`${tx.description}. ${sign}: ${amount} dollars.`} speechLanguage={speechLanguage} />
                             </View>
                         </Card>
                     );
@@ -266,7 +280,7 @@ const TransactionsScreen = ({ account, setScreen }) => {
     );
 };
 
-const TransferScreen = ({ setScreen }) => {
+const TransferScreen = ({ setScreen, speechLanguage }) => {
     const [amount, setAmount] = useState('');
     const handleTransfer = () => {
         if (amount && parseFloat(amount) > 0) {
@@ -276,9 +290,7 @@ const TransferScreen = ({ setScreen }) => {
                     { text: "Confirm", onPress: () => { 
                         Alert.alert("Success", "Transfer complete!"); 
                         // Check if Tts is available before speaking
-                        if (Tts) {
-                           Tts.speak("Transfer Complete");
-                        }
+                        speak('Transfer Complete', { language: speechLanguage })
                         setScreen('dashboard'); 
                     }} 
                 ]
@@ -304,7 +316,7 @@ const TransferScreen = ({ setScreen }) => {
     );
 };
 
-const ProfileScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnabled }) => (
+const ProfileScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnabled, speechLanguage, setSpeechLanguage }) => (
     <View style={styles.screen}>
         <ScreenHeader title="Profile" />
         <ScrollView style={{padding: 16}}>
@@ -330,6 +342,21 @@ const ProfileScreen = ({ setLoggedIn, isBiometricsEnabled, setIsBiometricsEnable
                     <Text style={styles.settingLabel}>Push Notifications</Text>
                     <Switch />
                 </View>
+                <View style={styles.settingRow}>
+                    <Text style={styles.settingLabel}>Speech Language</Text>
+                    <Picker
+                        selectedValue={speechLanguage}
+                        style={{height: 40, width: 180}}
+                        onValueChange={setSpeechLanguage}
+                        mode="dropdown"
+                    >
+                        <Picker.Item label="English" value="en-US" />
+                        <Picker.Item label="Hindi" value="hi-IN" />
+                        <Picker.Item label="Spanish" value="es-ES" />
+                        <Picker.Item label="French" value="fr-FR" />
+                        <Picker.Item label="German" value="de-DE" />
+                    </Picker>
+                </View>
             </Card>
 
             <TouchableOpacity onPress={() => setLoggedIn(false)} style={styles.logoutButton}>
@@ -345,52 +372,30 @@ export default function App() {
   const [activeScreen, setScreen] = useState('dashboard');
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [isBiometricsEnabled, setIsBiometricsEnabled] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState('en-US');
   
   // Initialize TTS engine
   useEffect(() => {
-    const initTts = async () => {
-        // Check if TTS is supported and initialize
-        const engines = await Tts.engines();
-        if (engines && engines.length > 0) {
-            Tts.setDefaultLanguage('en-US');
-            // Add event listeners
-            Tts.addEventListener('tts-start', (event) => console.log("start", event));
-            Tts.addEventListener('tts-finish', (event) => console.log("finish", event));
-            Tts.addEventListener('tts-cancel', (event) => console.log("cancel", event));
-        }
-    };
-    initTts();
-      
-    // Return cleanup function
-    return () => {
-        // Check if Tts is available before trying to stop it
-        if (Tts) {
-           Tts.stop();
-        }
-        // It's good practice to remove listeners
-        Tts.removeEventListener('tts-start', (event) => console.log("start", event));
-        Tts.removeEventListener('tts-finish', (event) => console.log("finish", event));
-        Tts.removeEventListener('tts-cancel', (event) => console.log("cancel", event));
-    };
+    // Removed Tts initialization and cleanup
   }, []);
 
 
-  const renderScreen = () => {
+  function renderScreen() {
     switch (activeScreen) {
       case 'dashboard':
-        return <DashboardScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} />;
+        return <DashboardScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} speechLanguage={speechLanguage} />;
       case 'accounts':
-        return <AccountsScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} />;
+        return <AccountsScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} speechLanguage={speechLanguage} />;
       case 'transactions':
-        return <TransactionsScreen account={selectedAccount} setScreen={setScreen} />;
+        return <TransactionsScreen account={selectedAccount} setScreen={setScreen} speechLanguage={speechLanguage} />;
       case 'transfer':
-        return <TransferScreen setScreen={setScreen} />;
+        return <TransferScreen setScreen={setScreen} speechLanguage={speechLanguage} />;
       case 'profile':
-        return <ProfileScreen setLoggedIn={setLoggedIn} isBiometricsEnabled={isBiometricsEnabled} setIsBiometricsEnabled={setIsBiometricsEnabled} />;
+        return <ProfileScreen setLoggedIn={setLoggedIn} isBiometricsEnabled={isBiometricsEnabled} setIsBiometricsEnabled={setIsBiometricsEnabled} speechLanguage={speechLanguage} setSpeechLanguage={setSpeechLanguage} />;
       default:
-        return <DashboardScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} />;
+        return <DashboardScreen setScreen={setScreen} setSelectedAccount={setSelectedAccount} speechLanguage={speechLanguage} />;
     }
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>

@@ -10,13 +10,16 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-picker/picker": "2.11.1",
     "expo": "~53.0.17",
+    "expo-local-authentication": "^16.0.5",
+    "expo-speech": "~13.1.7",
     "expo-status-bar": "~2.2.3",
+    "i18n-js": "^4.5.1",
     "lucide-react": "^0.525.0",
     "react": "19.0.0",
     "react-native": "0.79.5",
-    "react-native-tts": "^4.1.1",
-    "expo-speech": "~13.1.7"
+    "react-native-tts": "^4.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
